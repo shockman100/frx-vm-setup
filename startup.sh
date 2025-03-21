@@ -14,7 +14,7 @@ log "🚀 Startup script elindult"
 # 🔹 Rendszerfrissítés + alap csomagok
 {
   apt update && apt upgrade -y
-  apt install -y git python3-pip tmux curl unzip openjdk-11-jre
+  apt install -y git python3-pip tmux curl unzip default-jre
   pip install google-cloud-secret-manager
 } >> "$LOG_FILE" 2>> "$ERROR_LOG"
 
