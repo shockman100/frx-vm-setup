@@ -1,28 +1,31 @@
 #!/bin/bash
 
-# 🔹 Log fájlok
-LOG_FILE="/var/log/startup.log"
-ERROR_LOG="/var/log/startup-error.log"
-IB_LOG="/var/log/ibgateway.log"
-FOREX_LOG="/var/log/forex-bot.log"
+# 🔹 Log könyvtár és fájlok
+LOG_DIR="/logs"
+mkdir -p "$LOG_DIR"
+
+MAIN_LOG="$LOG_DIR/main_log.log"
+ERROR_LOG="$LOG_DIR/error.log"
+IB_LOG="$LOG_DIR/ibgateway.log"
+FOREX_LOG="$LOG_DIR/forex-bot.log"
 
 timestamp() { date +"%Y-%m-%d %H:%M:%S"; }
-log() { echo "$(timestamp) $1" | tee -a "$LOG_FILE"; }
+log() { echo "$(timestamp) $1" | tee -a "$MAIN_LOG"; }
 
 log "🚀 Startup script elindult"
 
-# 🔹 Rendszerfrissítés + alap csomagok
+# 🔹 Alap rendszerfrissítés és csomagok
 {
   apt update && apt upgrade -y
-  apt install -y git python3-pip tmux curl unzip default-jre
-  pip install google-cloud-secret-manager
-} >> "$LOG_FILE" 2>> "$ERROR_LOG"
+  apt install -y git python3-pip tmux curl unzip openjdk-11-jre
+  pip install --break-system-packages google-cloud-secret-manager
+} >> "$MAIN_LOG" 2>> "$ERROR_LOG"
 
-# 🔐 PROJECT_ID lekérdezése metadataból
+# 🔐 Projekt ID lekérése
 PROJECT_ID=$(curl -s -H "Metadata-Flavor: Google" \
   http://metadata.google.internal/computeMetadata/v1/project/project-id)
 
-# 🔐 Titkok beolvasása Secret Managerből
+# 🔐 Secret Manager olvasás
 read_secret() {
   python3 -c "
 from google.cloud import secretmanager
@@ -38,9 +41,9 @@ IB_PASS=$(read_secret "ib_password")
 TELEGRAM_TOKEN=$(read_secret "telegram_bot_token")
 TELEGRAM_CHAT_ID=$(read_secret "telegram_chat_id")
 
-log "✅ Titkok beolvasva"
+log "✅ Secretek sikeresen beolvasva"
 
-# 🔔 Telegram üzenetküldés függvény
+# 🔔 Telegram üzenetküldés
 send_telegram() {
   local msg="$1"
   curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage" \
@@ -48,27 +51,26 @@ send_telegram() {
     -d "text=$msg" > /dev/null
 }
 
-send_telegram "📡 Forex VM elindult. IB Gateway és bot indulása folyamatban."
+send_telegram "📡 Forex VM újraindult – startup script fut"
 
-# ⬇️ IB Gateway letöltés + indítás
+# 🧭 IB Gateway letöltés és indítás
 {
-  log "⬇️ IB Gateway letöltése"
+  log "⬇️ IB Gateway előkészítés"
   mkdir -p /root/ibgateway
   cd /root/ibgateway
   if [ ! -f "ibgateway-latest.jar" ]; then
     curl -O https://download.interactivebrokers.com/ibgateway/standalone-1010/ibgateway-latest.jar
   fi
-
   echo "$IB_USER" > user.txt
   echo "$IB_PASS" > pass.txt
 
   log "🚀 IB Gateway indítása"
   tmux new-session -d -s ibgateway "java -jar ibgateway-latest.jar < user.txt" &>> "$IB_LOG"
-} >> "$LOG_FILE" 2>> "$ERROR_LOG"
+} >> "$MAIN_LOG" 2>> "$ERROR_LOG"
 
-# ⬇️ Forex bot letöltése + indítása
+# 🤖 Forex bot letöltése és indítása
 {
-  log "⬇️ Forex bot letöltése és indítása"
+  log "⬇️ Forex bot letöltés és indítás"
   cd /root
   if [ ! -d "forex-bot" ]; then
     git clone https://github.com/YOUR_GITHUB_USER/YOUR_FOREX_REPO.git forex-bot
@@ -76,8 +78,7 @@ send_telegram "📡 Forex VM elindult. IB Gateway és bot indulása folyamatban.
   cd forex-bot
   pip install -r requirements.txt
   python main.py &>> "$FOREX_LOG" &
-} >> "$LOG_FILE" 2>> "$ERROR_LOG"
+} >> "$MAIN_LOG" 2>> "$ERROR_LOG"
 
-send_telegram "✅ IB Gateway és forex bot elindult. Minden rendben."
-
-log "🏁 Startup script befejeződött"
+send_telegram "✅ IB Gateway + Forex bot elindult. Napló: $MAIN_LOG"
+log "🏁 Startup script teljesítve"
