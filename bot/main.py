@@ -9,7 +9,7 @@ from telegram.ext import (
     ContextTypes,
 )
 
-from modules.telegram import send_telegram
+from modules import telegram
 from modules.fetch import fetch_price
 
 # --- Konstansok ---
@@ -38,7 +38,7 @@ async def price_logger():
 
 # --- Főfüggvény ---
 async def main():
-    app = ApplicationBuilder().token(send_telegram.token).build()
+    app = ApplicationBuilder().token(telegram.TELEGRAM_TOKEN).build()
 
     app.add_handler(CommandHandler("status", status))
     app.add_handler(CommandHandler("ask", ask))
@@ -53,3 +53,5 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     asyncio.run(main())
 
+
+#
