@@ -25,12 +25,13 @@ log "🚀 Startup script elindult"
 PROJECT_ID=$(curl -s -H "Metadata-Flavor: Google" \
   http://metadata.google.internal/computeMetadata/v1/project/project-id)
 
-# 🔐 Secret Manager olvasás
+# 🔐 Secret Manager olvasás (javított változóátadással)
 read_secret() {
+  SECRET_NAME=$1
   python3 -c "
 from google.cloud import secretmanager
 client = secretmanager.SecretManagerServiceClient()
-name = 'projects/$PROJECT_ID/secrets/$1/versions/latest'
+name = f'projects/${PROJECT_ID}/secrets/${SECRET_NAME}/versions/latest'
 response = client.access_secret_version(request={'name': name})
 print(response.payload.data.decode('UTF-8'))
 "
@@ -42,13 +43,15 @@ TELEGRAM_TOKEN=$(read_secret "telegram_bot_token")
 TELEGRAM_CHAT_ID=$(read_secret "telegram_chat_id")
 
 log "✅ Secretek sikeresen beolvasva"
+log "ℹ️ TELEGRAM_TOKEN karakterek száma: ${#TELEGRAM_TOKEN}"
+log "ℹ️ TELEGRAM_CHAT_ID: $TELEGRAM_CHAT_ID"
 
 # 🔔 Telegram üzenetküldés
 send_telegram() {
   local msg="$1"
   curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage" \
     -d "chat_id=$TELEGRAM_CHAT_ID" \
-    -d "text=$msg" > /dev/null
+    -d "text=$msg" >> "$MAIN_LOG" 2>> "$ERROR_LOG"
 }
 
 send_telegram "📡 Forex VM újraindult – startup script fut"
