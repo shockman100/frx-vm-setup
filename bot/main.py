@@ -37,17 +37,21 @@ async def price_logger():
 
 
 async def main():
+    print("MAIN.PY: starting...")
     app = ApplicationBuilder().token(telegram.TELEGRAM_TOKEN).build()
     app.add_handler(CommandHandler("status", status))
     app.add_handler(CommandHandler("ask", ask))
 
     asyncio.create_task(price_logger())
 
-    # Aszinkron Telegram üzenet indításkor
+    # Próbálkozás Telegram üzenetküldéssel
+    print("MAIN.PY: sending Telegram startup message...")
     await telegram.send_telegram("Bot started.")
+    print("MAIN.PY: message sent (awaited)")
 
     await app.run_polling()
 
 
 if __name__ == "__main__":
+    print("MAIN.PY: launching asyncio event loop...")
     asyncio.run(main())
