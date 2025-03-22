@@ -3,6 +3,8 @@ import logging
 from datetime import datetime
 
 from telegram import Update
+from modules.telegram import send_telegram  
+
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
@@ -11,6 +13,9 @@ from telegram.ext import (
 
 from modules import telegram
 from modules.fetch import fetch_price
+
+
+send_telegram("🚀 Forex bot elindult és figyel.")
 
 # --- Konstansok ---
 PAIR = "EURUSD"
