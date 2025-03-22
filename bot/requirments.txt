@@ -1,2 +1,3 @@
 ib_insync
 requests
+google-cloud-secret-manager
