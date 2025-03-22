@@ -96,9 +96,8 @@ send_telegram "📡 Forex VM újraindult – startup script fut"
     python3 -m venv venv
   fi
 
-  source venv/bin/activate
-  pip install --upgrade pip
-  pip install -r bot/requirements.txt
+  "$PROJECT_DIR/venv/bin/pip" install --upgrade pip
+  "$PROJECT_DIR/venv/bin/pip" install -r bot/requirements.txt
 
   "$PROJECT_DIR/venv/bin/python" "$PROJECT_DIR/bot/main.py" &>> "$FOREX_LOG" &
 } >> "$MAIN_LOG" 2>> "$ERROR_LOG"
