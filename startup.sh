@@ -93,7 +93,7 @@ send_telegram "📡 Forex VM újraindult – startup script fut"
   fi
 
   if [ ! -d "venv" ]; then
-    python3 -m venv venv
+  sudo -u shockman100 python3 -m venv venv
   fi
 
   "$PROJECT_DIR/venv/bin/pip" install --upgrade pip
