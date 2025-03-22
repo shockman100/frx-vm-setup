@@ -27,8 +27,8 @@ log() { echo "$(timestamp) $1" | tee -a "$MAIN_LOG"; }
 log "🚀 Startup script elindult"
 
 {
-  apt update && apt upgrade -y
-  apt install -y git python3-pip tmux curl unzip default-jre
+  apt update && apt upgrade -y 
+  apt install -y git python3-pip python3-venv tmux curl unzip default-jre
   pip install --break-system-packages google-cloud-secret-manager
 } >> "$MAIN_LOG" 2>> "$ERROR_LOG"
 
