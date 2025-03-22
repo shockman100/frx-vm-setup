@@ -1,46 +1,49 @@
-from google.cloud import secretmanager
+import aiohttp
 import requests
 import os
 
-# --- Projekt ID lekérdezése (GCP metadata vagy fallback) ---
+# Projekt ID lekérdezése
 def get_project_id():
     try:
         r = requests.get(
             "http://metadata.google.internal/computeMetadata/v1/project/project-id",
             headers={"Metadata-Flavor": "Google"},
-            timeout=2
+            timeout=1,
         )
-        return r.text.strip()
+        if r.status_code == 200:
+            return r.text
     except Exception:
-        return os.getenv("PROJECT_ID")
+        return os.environ.get("PROJECT_ID", None)
 
-# --- Secret leolvasása a Secret Managerből ---
+# Secret Manager olvasás
 def read_secret(name):
     project_id = get_project_id()
-    client = secretmanager.SecretManagerServiceClient()
-    secret_name = f"projects/{project_id}/secrets/{name}/versions/latest"
-    response = client.access_secret_version(request={"name": secret_name})
-    return response.payload.data.decode("utf-8")
+    if not project_id:
+        return None
+    url = f"https://secretmanager.googleapis.com/v1/projects/{project_id}/secrets/{name}/versions/latest:access"
+    headers = {"Authorization": f"Bearer {os.environ.get('ACCESS_TOKEN', '')}"}
+    r = requests.get(url, headers=headers)
+    if r.status_code == 200:
+        return r.json()["payload"]["data"]
+    return None
 
-# --- Token és chat ID egyszeri betöltése ---
-try:
-    TELEGRAM_TOKEN = read_secret("telegram_bot_token")
-    TELEGRAM_CHAT_ID = read_secret("telegram_chat_id")
-except Exception as e:
-    print("❌ Hiba a Telegram secret betöltésekor:", e)
-    TELEGRAM_TOKEN = None
-    TELEGRAM_CHAT_ID = None
+# Tokenek betöltése
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN") or read_secret("telegram_bot_token")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID") or read_secret("telegram_chat_id")
 
-# --- Üzenetküldés ---
-def send_telegram(message):
+# ASZINKRON Telegram üzenetküldő
+async def send_telegram(message: str):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
-        print("❌ Nincs Telegram token vagy chat_id inicializálva.")
+        print("Missing Telegram token or chat ID")
         return
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    data = {'chat_id': TELEGRAM_CHAT_ID, 'text': message}
-    try:
-        r = requests.post(url, data=data)
-        r.raise_for_status()
-    except Exception as e:
-        print("❌ Telegram hiba:", e)
 
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=payload) as resp:
+                if resp.status != 200:
+                    print(f"Failed to send Telegram message: {resp.status}")
+    except Exception as e:
+        print(f"Exception in send_telegram: {e}")
