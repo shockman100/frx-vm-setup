@@ -9,7 +9,8 @@ else
 fi
 
 # 🔹 Elérési utak
-USER_HOME="/home/$(logname)"
+USER_NAME="shockman100"
+USER_HOME="/home/$USER_NAME"
 PROJECT_DIR="$USER_HOME/forex-bot"
 
 LOG_DIR="/logs"
@@ -25,18 +26,15 @@ log() { echo "$(timestamp) $1" | tee -a "$MAIN_LOG"; }
 
 log "🚀 Startup script elindult"
 
-# 🔹 Alap rendszerfrissítés és csomagok
 {
   apt update && apt upgrade -y
   apt install -y git python3-pip tmux curl unzip default-jre
   pip install --break-system-packages google-cloud-secret-manager
 } >> "$MAIN_LOG" 2>> "$ERROR_LOG"
 
-# 🔐 Projekt ID lekérése
 PROJECT_ID=$(curl -s -H "Metadata-Flavor: Google" \
   http://metadata.google.internal/computeMetadata/v1/project/project-id)
 
-# 🔐 Secret Manager olvasás
 read_secret() {
   SECRET_NAME=$1
   python3 -c "
@@ -57,7 +55,6 @@ log "✅ Secretek sikeresen beolvasva"
 log "ℹ️ TELEGRAM_TOKEN karakterek száma: ${#TELEGRAM_TOKEN}"
 log "ℹ️ TELEGRAM_CHAT_ID: $TELEGRAM_CHAT_ID"
 
-# 🔔 Telegram üzenetküldés
 send_telegram() {
   local msg="$1"
   curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage" \
@@ -67,7 +64,6 @@ send_telegram() {
 send_telegram "--------------------------------------------"
 send_telegram "📡 Forex VM újraindult – startup script fut"
 
-# 🧭 IB Gateway letöltés és indítás
 {
   log "⬇️ IB Gateway előkészítés"
   mkdir -p "$USER_HOME/ibgateway"
@@ -82,7 +78,6 @@ send_telegram "📡 Forex VM újraindult – startup script fut"
   tmux new-session -d -s ibgateway "java -jar ibgateway-latest.jar < user.txt" &>> "$IB_LOG"
 } >> "$MAIN_LOG" 2>> "$ERROR_LOG"
 
-# 🤖 Forex bot letöltése, venv létrehozás, futtatás
 {
   log "⬇️ Forex bot letöltés és indítás"
   cd "$USER_HOME"
@@ -96,7 +91,6 @@ send_telegram "📡 Forex VM újraindult – startup script fut"
     echo "❌ Nincs bot/requirements.txt, megszakítom."
     exit 1
   fi
-
 
   if [ ! -d "venv" ]; then
     python3 -m venv venv
