@@ -19,7 +19,6 @@ log "🚀 Startup script elindult"
   apt update && apt upgrade -y
   apt install -y git python3-pip tmux curl unzip default-jre
   pip install --break-system-packages google-cloud-secret-manager
-  
 } >> "$MAIN_LOG" 2>> "$ERROR_LOG"
 
 # 🔐 Projekt ID lekérése
@@ -74,7 +73,7 @@ send_telegram "📡 Forex VM újraindult – startup script fut"
   log "⬇️ Forex bot letöltés és indítás"
   cd /root
   if [ ! -d "forex-bot" ]; then
-    git clone https://github.com/YOUR_GITHUB_USER/YOUR_FOREX_REPO.git forex-bot
+    git clone https://github.com/shockman100/frx-vm-setup.git forex-bot
   fi
   cd forex-bot
   pip install --break-system-packages -r requirements.txt
