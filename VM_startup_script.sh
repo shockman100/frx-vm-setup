@@ -1,15 +1,16 @@
 #!/bin/bash
+
 # Frissítések és függőségek
 sudo apt update && sudo apt upgrade -y
 sudo apt install -y curl git python3-pip
 
-# Töltsük le a startup scriptet GitHubról vagy GCS-ről
-curl -o /root/startup.sh https://raw.githubusercontent.com/shockman100/frx-vm-setup/refs/heads/main/startup.sh
+# Hová tegye a projektet? → saját mappába
+USER_HOME="/home/$(logname)"
+TARGET_DIR="$USER_HOME/forex-bot"
 
-# Futtassuk le a letöltött scriptet
-chmod +x /root/startup.sh
-bash /root/startup.sh
+# Startup script letöltése
+curl -o "$TARGET_DIR/startup.sh" https://raw.githubusercontent.com/shockman100/frx-vm-setup/refs/heads/main/startup.sh
 
-# Futtassuk le a letöltött scriptet
-chmod +x /root/startup.sh
-bash /root/startup.sh
+# Futtatás
+chmod +x "$TARGET_DIR/startup.sh"
+bash "$TARGET_DIR/startup.sh"
