@@ -92,10 +92,11 @@ send_telegram "📡 Forex VM újraindult – startup script fut"
   fi
   cd "$PROJECT_DIR"
 
-  if [ ! -f "requirements.txt" ]; then
-    echo "❌ Nincs requirements.txt, megszakítom."
+  if [ ! -f "bot/requirements.txt" ]; then
+    echo "❌ Nincs bot/requirements.txt, megszakítom."
     exit 1
   fi
+
 
   if [ ! -d "venv" ]; then
     python3 -m venv venv
@@ -103,7 +104,7 @@ send_telegram "📡 Forex VM újraindult – startup script fut"
 
   source venv/bin/activate
   pip install --upgrade pip
-  pip install -r requirements.txt
+  pip install -r bot/requirements.txt
 
   "$PROJECT_DIR/venv/bin/python" "$PROJECT_DIR/bot/main.py" &>> "$FOREX_LOG" &
 } >> "$MAIN_LOG" 2>> "$ERROR_LOG"
