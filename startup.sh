@@ -80,7 +80,7 @@ send_telegram "📡 Forex VM újraindult – startup script fut"
   tmux new-session -d -s ibgateway "java -jar ibgateway-latest.jar < user.txt" &>> "$IB_LOG"
 } >> "$MAIN_LOG" 2>> "$ERROR_LOG"
 
-# 🤖 Forex bot letöltése és indítása
+# 🤖 Forex bot letöltése, venv létrehozás, futtatás
 {
   log "⬇️ Forex bot letöltés és indítás"
   cd /root
@@ -88,8 +88,21 @@ send_telegram "📡 Forex VM újraindult – startup script fut"
     git clone https://github.com/shockman100/frx-vm-setup.git forex-bot
   fi
   cd forex-bot
-  pip install --break-system-packages -r requirements.txt
-  python main.py &>> "$FOREX_LOG" &
+
+  # 🔹 venv létrehozása (ha még nincs)
+  if [ ! -d "venv" ]; then
+    python3 -m venv venv
+  fi
+
+  # 🔹 Aktiválás
+  source venv/bin/activate
+
+  # 🔹 Modulok telepítése a requirements.txt alapján
+  pip install --upgrade pip
+  pip install -r requirements.txt
+
+  # 🔹 Python script futtatása háttérben, logolással
+  venv/bin/python main.py &>> "$FOREX_LOG" &
 } >> "$MAIN_LOG" 2>> "$ERROR_LOG"
 
 send_telegram "✅ IB Gateway + Forex bot elindult. Napló: $MAIN_LOG"
