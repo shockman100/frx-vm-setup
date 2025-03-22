@@ -102,7 +102,7 @@ send_telegram "📡 Forex VM újraindult – startup script fut"
   pip install -r requirements.txt
 
   # 🔹 Python script futtatása háttérben, logolással
-  venv/bin/python main.py &>> "$FOREX_LOG" &
+  venv/bin/python bot/main.py &>> "$FOREX_LOG" &
 } >> "$MAIN_LOG" 2>> "$ERROR_LOG"
 
 send_telegram "✅ IB Gateway + Forex bot elindult. Napló: $MAIN_LOG"
