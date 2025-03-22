@@ -1,5 +1,14 @@
 #!/bin/bash
 
+LOCK_FILE="/tmp/startup.lock"
+if [ -f "$LOCK_FILE" ]; then
+  echo "⚠️ Startup script már futott, kilépés."
+  exit 0
+else
+  touch "$LOCK_FILE"
+fi
+
+
 # 🔹 Log könyvtár és fájlok
 LOG_DIR="/logs"
 mkdir -p "$LOG_DIR"
