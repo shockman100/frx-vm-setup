@@ -8,7 +8,7 @@ else
   touch "$LOCK_FILE"
 fi
 
-# 🔹 Elérési utak (konkrétan megadva a felhasználót)
+# 🔹 Elérési utak – konkrétan megadva a shockman100 felhasználót
 USER_NAME="shockman100"
 USER_HOME="/home/$USER_NAME"
 PROJECT_DIR="$USER_HOME/forex-bot"
@@ -92,10 +92,10 @@ send_telegram "📡 Forex VM újraindult – startup script fut"
     exit 1
   fi
 
-  # Virtualenv létrehozása, ha még nincs – futtatva a shockman100 userrel
+  # Virtualenv létrehozása, ha még nincs – a shockman100 felhasználó nevében
   if [ ! -d "$PROJECT_DIR/venv" ]; then
     log "🐍 Virtualenv létrehozása"
-    sudo -u $USER_NAME python3 -m venv "$PROJECT_DIR/venv"
+    sudo -u $USER_NAME python3 -m venv --upgrade-deps --clear --break-system-packages "$PROJECT_DIR/venv"
   fi
 
   "$PROJECT_DIR/venv/bin/pip" install --upgrade pip
