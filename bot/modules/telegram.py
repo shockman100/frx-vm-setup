@@ -1,8 +1,9 @@
-import aiohttp
-import requests
 import os
+import requests
+import base64
+import aiohttp
 
-# Projekt ID lekérdezése
+# GCP projekt ID lekérdezése (vagy fallback környezeti változóból)
 def get_project_id():
     try:
         r = requests.get(
@@ -15,35 +16,46 @@ def get_project_id():
     except Exception:
         return os.environ.get("PROJECT_ID", None)
 
-# Secret Manager olvasás
+
+# GCP Secret Manager-ből titok kiolvasása
 def read_secret(name):
     project_id = get_project_id()
     if not project_id:
         return None
+
     url = f"https://secretmanager.googleapis.com/v1/projects/{project_id}/secrets/{name}/versions/latest:access"
     headers = {"Authorization": f"Bearer {os.environ.get('ACCESS_TOKEN', '')}"}
-    r = requests.get(url, headers=headers)
-    if r.status_code == 200:
-        return r.json()["payload"]["data"]
+    try:
+        r = requests.get(url, headers=headers)
+        if r.status_code == 200:
+            encoded_data = r.json()["payload"]["data"]
+            return base64.b64decode(encoded_data).decode("utf-8")
+    except Exception as e:
+        print(f"Error reading secret {name}: {e}")
     return None
 
-# Tokenek betöltése
+
+# Tokenek beállítása környezeti változóból vagy GCP-ből
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN") or read_secret("telegram_bot_token")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID") or read_secret("telegram_chat_id")
 
-# ASZINKRON Telegram üzenetküldő
+
+# ASZINKRON Telegram üzenetküldés
 async def send_telegram(message: str):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
         print("Missing Telegram token or chat ID")
         return
 
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
+    payload = {
+        "chat_id": TELEGRAM_CHAT_ID,
+        "text": message,
+    }
 
     try:
         async with aiohttp.ClientSession() as session:
             async with session.post(url, json=payload) as resp:
                 if resp.status != 200:
-                    print(f"Failed to send Telegram message: {resp.status}")
+                    print(f"Telegram message failed ({resp.status}): {await resp.text()}")
     except Exception as e:
-        print(f"Exception in send_telegram: {e}")
+        print(f"Exception during Telegram send: {e}")
