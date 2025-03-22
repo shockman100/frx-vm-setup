@@ -8,8 +8,10 @@ else
   touch "$LOCK_FILE"
 fi
 
+# 🔹 Elérési utak
+USER_HOME="/home/$(logname)"
+PROJECT_DIR="$USER_HOME/forex-bot"
 
-# 🔹 Log könyvtár és fájlok
 LOG_DIR="/logs"
 mkdir -p "$LOG_DIR"
 
@@ -34,7 +36,7 @@ log "🚀 Startup script elindult"
 PROJECT_ID=$(curl -s -H "Metadata-Flavor: Google" \
   http://metadata.google.internal/computeMetadata/v1/project/project-id)
 
-# 🔐 Secret Manager olvasás (javított változóátadással)
+# 🔐 Secret Manager olvasás
 read_secret() {
   SECRET_NAME=$1
   python3 -c "
@@ -68,8 +70,8 @@ send_telegram "📡 Forex VM újraindult – startup script fut"
 # 🧭 IB Gateway letöltés és indítás
 {
   log "⬇️ IB Gateway előkészítés"
-  mkdir -p /root/ibgateway
-  cd /root/ibgateway
+  mkdir -p "$USER_HOME/ibgateway"
+  cd "$USER_HOME/ibgateway"
   if [ ! -f "ibgateway-latest.jar" ]; then
     curl -O https://download.interactivebrokers.com/ibgateway/standalone-1010/ibgateway-latest.jar
   fi
@@ -83,28 +85,27 @@ send_telegram "📡 Forex VM újraindult – startup script fut"
 # 🤖 Forex bot letöltése, venv létrehozás, futtatás
 {
   log "⬇️ Forex bot letöltés és indítás"
-  cd /root
-  if [ ! -d "forex-bot" ]; then
-    git clone https://github.com/shockman100/frx-vm-setup.git forex-bot
+  cd "$USER_HOME"
+  if [ ! -d "$PROJECT_DIR/bot" ]; then
+    rm -rf "$PROJECT_DIR"
+    git clone https://github.com/shockman100/frx-vm-setup.git "$PROJECT_DIR"
   fi
-  cd forex-bot
+  cd "$PROJECT_DIR"
 
-  # 🔹 venv létrehozása (ha még nincs)
+  if [ ! -f "requirements.txt" ]; then
+    echo "❌ Nincs requirements.txt, megszakítom."
+    exit 1
+  fi
+
   if [ ! -d "venv" ]; then
     python3 -m venv venv
   fi
 
-  # 🔹 Aktiválás
   source venv/bin/activate
-
-  # 🔹 Modulok telepítése a requirements.txt alapján
   pip install --upgrade pip
   pip install -r requirements.txt
 
-  # 🔹 Python script futtatása háttérben, logolással
-  #venv/bin/python bot/main.py &>> "$FOREX_LOG" &
-  /root/forex-bot/venv/bin/python /root/forex-bot/bot/main.py &>> "$FOREX_LOG" &
-
+  "$PROJECT_DIR/venv/bin/python" "$PROJECT_DIR/bot/main.py" &>> "$FOREX_LOG" &
 } >> "$MAIN_LOG" 2>> "$ERROR_LOG"
 
 send_telegram "✅ IB Gateway + Forex bot elindult. Napló: $MAIN_LOG"
