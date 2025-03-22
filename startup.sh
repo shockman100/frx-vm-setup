@@ -62,7 +62,7 @@ send_telegram() {
     -d "chat_id=$TELEGRAM_CHAT_ID" \
     -d "text=$msg" >> "$MAIN_LOG" 2>> "$ERROR_LOG"
 }
-
+send_telegram "--------------------------------------------"
 send_telegram "📡 Forex VM újraindult – startup script fut"
 
 # 🧭 IB Gateway letöltés és indítás
