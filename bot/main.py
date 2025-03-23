@@ -5,7 +5,7 @@ from datetime import datetime
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-# Modulútvonal beállítása (hogy a 'modules' könyvtár működjön)
+# Modulútvonal beállítása
 sys.path.append(os.path.dirname(__file__))
 
 import modules.telegram_sender as tg
@@ -27,17 +27,15 @@ async def ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def price_logger():
-    while True:
-        price = await fetch_price(PAIR)
-        timestamp = datetime.utcnow().isoformat()
-        log_entry = f"{timestamp} {PAIR} {price}\n"
-        try:
-            os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
-            with open(LOG_FILE, "a") as f:
-                f.write(log_entry)
-        except Exception as e:
-            print(f"❌ LOGGING ERROR: {e}")
-        await asyncio.sleep(LOG_INTERVAL)
+    price = await fetch_price(PAIR)
+    timestamp = datetime.utcnow().isoformat()
+    log_entry = f"{timestamp} {PAIR} {price}\n"
+    try:
+        os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
+        with open(LOG_FILE, "a") as f:
+            f.write(log_entry)
+    except Exception as e:
+        print(f"❌ LOGGING ERROR: {e}")
 
 
 async def main():
@@ -49,15 +47,15 @@ async def main():
     app.add_handler(CommandHandler("status", status))
     app.add_handler(CommandHandler("ask", ask))
 
-    asyncio.create_task(price_logger())  # A price logger folyamatosan fut
+    # Indítsd el a price_logger()-t egy külön szálon
+    await price_logger()
 
+    # Telegram polling indítása
     print("MAIN: sending Telegram start message...")
     await asyncio.to_thread(tg.send_telegram, "🤖 Forex bot elindult és figyel.")
     print("MAIN: Telegram message sent.")
-
-    await app.run_polling()  # Eseménykezelés elindítása
-
+    await app.run_polling()  # Indítsd el az eseménykezelést
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()  # Get the existing event loop
-    loop.run_until_complete(main())  # Run the main function with the existing loop
+    loop = asyncio.get_event_loop()  # Ha már futó eseményhurok van, akkor ezt használjuk
+    loop.run_until_complete(main())  # Futtasd a fő aszinkron funkciót
