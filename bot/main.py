@@ -5,6 +5,7 @@ from datetime import datetime
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
+# Modulútvonal beállítása
 sys.path.append(os.path.dirname(__file__))
 
 import modules.telegram_sender as tg
@@ -36,10 +37,10 @@ async def price_logger():
         print(f"❌ LOGGING ERROR: {e}")
 
 
-async def run_bot():
+async def main():
     print("MAIN: initializing bot")
-
     tg.init_telegram_credentials()
+
     await price_logger()
     tg.send_telegram("🤖 Forex bot elindult és figyel.")
 
@@ -50,11 +51,6 @@ async def run_bot():
     await app.run_polling()
 
 
-# A Python 3.11 miatt itt létre kell hozni a loopot!
+# ⚠️ NE használj loop.run_until_complete! Python 3.11 alatt:
 if __name__ == "__main__":
-    try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(run_bot())
-    except KeyboardInterrupt:
-        print("🛑 Bot leállítva.")
+    asyncio.run(main())
