@@ -5,7 +5,7 @@ from datetime import datetime
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-# Modulútvonal beállítása (hogy a 'modules' könyvtár működjön)
+# Modulútvonal beállítása
 sys.path.append(os.path.dirname(__file__))
 
 import modules.telegram_sender as tg
@@ -47,17 +47,19 @@ async def main():
     app.add_handler(CommandHandler("status", status))
     app.add_handler(CommandHandler("ask", ask))
 
-    # Árfolyam egyszeri logolása
     await price_logger()
-
-    # Indulási üzenet küldése
     print("MAIN: sending Telegram start message...")
     await asyncio.to_thread(tg.send_telegram, "🤖 Forex bot elindult és figyel.")
     print("MAIN: Telegram message sent.")
 
-    # Bot polling indítása
     await app.run_polling()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+    loop.run_until_complete(main())
