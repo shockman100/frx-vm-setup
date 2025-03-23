@@ -5,10 +5,11 @@ from datetime import datetime
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-# Modulútvonal hozzáadása, hogy a 'modules' könyvtár importálható legyen
+# Modulútvonal beállítása (hogy a 'modules' könyvtár működjön)
 sys.path.append(os.path.dirname(__file__))
 
-from modules import send_telegram as tg
+# Helyes import a send_telegram modulból
+import modules.send_telegram as tg
 from modules.fetch import fetch_price
 
 PAIR = "EURUSD"
