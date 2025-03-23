@@ -1,3 +1,4 @@
+import os
 import asyncio
 from datetime import datetime
 from telegram import Update
@@ -7,7 +8,11 @@ from modules.fetch import fetch_price
 
 PAIR = "EURUSD"
 LOG_INTERVAL = 60  # másodperc
-LOG_FILE = "/logs/price_log.txt"
+
+# Dinamikus log útvonal
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+LOG_DIR = os.path.join(BASE_DIR, "logs")
+LOG_FILE = os.path.join(LOG_DIR, "price_log.txt")
 
 
 async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -21,6 +26,7 @@ async def ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def price_logger():
+    os.makedirs(LOG_DIR, exist_ok=True)
     while True:
         price = await fetch_price(PAIR)
         timestamp = datetime.utcnow().isoformat()
