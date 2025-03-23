@@ -52,11 +52,4 @@ async def main():
 
 # Javított rész:
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.create_task(main()) #Task létrehozása a loop elindítása előtt.
-    try:
-        loop.run_forever()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        loop.close()
+    asyncio.run(main()) #Visszatérünk az asyncio.run használatához.
