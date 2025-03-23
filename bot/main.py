@@ -49,12 +49,12 @@ async def main():
     app.add_handler(CommandHandler("status", status))
     app.add_handler(CommandHandler("ask", ask))
 
-    # Az eseményhurok kezelése egyetlen futó hurokban történik
+    # A price_logger futtatása a Telegram pollinggal egy közös eseményhurok alatt
     await asyncio.gather(price_logger(), app.run_polling())
 
 
 if __name__ == "__main__":
-    # Eseményhurok elindítása az asyncio-ban
+    # Ha már fut egy eseményhurok, akkor nem indítunk újat
     if not asyncio.get_event_loop().is_running():
         asyncio.run(main())
     else:
