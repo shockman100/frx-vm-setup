@@ -8,8 +8,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 # Modulútvonal beállítása (hogy a 'modules' könyvtár működjön)
 sys.path.append(os.path.dirname(__file__))
 
-# Helyes import a send_telegram modulból
-import modules.send_telegram as tg
+import modules.telegram_sender as tg
 from modules.fetch import fetch_price
 
 PAIR = "EURUSD"
