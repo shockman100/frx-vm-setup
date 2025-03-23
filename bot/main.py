@@ -5,7 +5,7 @@ from datetime import datetime
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-# Hozzáadjuk a script könyvtárát a Python path-hoz
+# Modulútvonal beállítása (hogy a 'modules' könyvtár működjön)
 sys.path.append(os.path.dirname(__file__))
 
 import modules.telegram as tg
