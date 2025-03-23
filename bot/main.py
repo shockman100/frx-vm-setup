@@ -40,25 +40,19 @@ async def price_logger():
 def main():
     print("MAIN: initializing bot")
 
-    # 👇 LÉTREHOZZUK A LOOPOT KÉZZEL
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
     tg.init_telegram_credentials()
 
     # Egyszeri árfolyam logolás
-    loop.run_until_complete(price_logger())
+    asyncio.run(price_logger())
 
     tg.send_telegram("🤖 Forex bot elindult és figyel.")
 
-    # Bot elindítása
+    # Bot elindítása (saját loopot kezel)
     app = ApplicationBuilder().token(tg.TELEGRAM_TOKEN).build()
     app.add_handler(CommandHandler("status", status))
     app.add_handler(CommandHandler("ask", ask))
 
-    # Indítás blocking módon (itt már van loop)
-    app.run_polling()
-
+    app.run_polling()  # blokkoló hívás, nem kell saját loop
 
 if __name__ == "__main__":
     main()
