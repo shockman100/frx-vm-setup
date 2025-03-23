@@ -36,7 +36,8 @@ async def price_logger():
 async def main():
     print("Bot is starting...")
 
-    app = ApplicationBuilder().token("YOUR_BOT_TOKEN").build()  # Cseréld ki a saját tokenedre
+    # Az alkalmazás tokenjét secretből szerezd meg (például környezeti változókból)
+    app = ApplicationBuilder().token("YOUR_BOT_TOKEN").build()  # Ne felejtsd el cserélni a helyes tokenre
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("ask", ask))
 
