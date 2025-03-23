@@ -48,6 +48,7 @@ async def main():
     app.add_handler(CommandHandler("ask", ask))
 
     await price_logger()
+
     print("MAIN: sending Telegram start message...")
     await asyncio.to_thread(tg.send_telegram, "🤖 Forex bot elindult és figyel.")
     print("MAIN: Telegram message sent.")
@@ -55,11 +56,16 @@ async def main():
     await app.run_polling()
 
 
+# FUTÁS BIZTONSÁGOSAN — BÁRMILYEN KÖRNYEZETBEN
 if __name__ == "__main__":
+    import threading
+
     try:
         loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # Ha már fut egy loop, új szálat nyitunk
+            threading.Thread(target=lambda: asyncio.run(main())).start()
+        else:
+            loop.run_until_complete(main())
     except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-    loop.run_until_complete(main())
+        asyncio.run(main())
