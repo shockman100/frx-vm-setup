@@ -1,13 +1,11 @@
-import asyncio
 from ib_insync import IB, Stock
 from modules.telegram_sender import send_telegram, init_telegram_credentials, read_secret
 
 
-async def run_bot():
+def run_bot():
     init_telegram_credentials()
 
     try:
-        # Titkok olvasása a saját, működő függvényeddel
         ib_host = read_secret("ib_host") or "127.0.0.1"
         ib_port = int(read_secret("ib_port") or 7497)
         ib_client_id = int(read_secret("ib_client_id") or 1)
@@ -40,5 +38,4 @@ async def run_bot():
 
 
 if __name__ == "__main__":
-    # A Te környezetedben működő, egyszerű és letesztelt asyncio indítás
-    asyncio.run(run_bot())
+    run_bot()
