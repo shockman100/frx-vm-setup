@@ -52,4 +52,4 @@ async def main():
 
 # Javított rész:
 if __name__ == "__main__":
-    asyncio.run(main()) #Visszatérünk az asyncio.run használatához.
+    asyncio.run(main())
