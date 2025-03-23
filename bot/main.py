@@ -38,21 +38,29 @@ async def price_logger():
 
 
 def main():
-    print("MAIN: launching bot...")
-
+    # Inicializálás
     tg.init_telegram_credentials()
+    if not tg.TELEGRAM_TOKEN:
+        print("❌ Nincs TELEGRAM_TOKEN!")
+        return
 
+    # Egyszeri logolás
+    try:
+        asyncio.run(price_logger())
+    except RuntimeError:
+        # Ha már fut a loop (pl. systemd alatt), akkor így
+        loop = asyncio.get_event_loop()
+        loop.create_task(price_logger())
+
+    # Üzenetküldés szinkronban
+    tg.send_telegram("🤖 Forex bot elindult és figyel.")
+
+    # Bot létrehozása és indítása
     app = ApplicationBuilder().token(tg.TELEGRAM_TOKEN).build()
     app.add_handler(CommandHandler("status", status))
     app.add_handler(CommandHandler("ask", ask))
 
-    # Árfolyam logolás aszinkron módon – külön eseményként
-    asyncio.run(price_logger())
-
-    # Üzenet küldése külön szálon, mert nem async
-    tg.send_telegram("🤖 Forex bot elindult és figyel.")
-
-    # Bot polling – saját loopot kezel, nincs szükség asyncio.run-re
+    # Itt nincs async → nincs hiba!
     app.run_polling()
 
 
