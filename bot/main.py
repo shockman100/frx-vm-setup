@@ -1,41 +1,37 @@
-import asyncio
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
-
-from modules.telegram_sender import init_telegram_credentials, send_telegram
-from modules.secret_reader import read_secret
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from modules.telegram_sender import send_telegram, read_secret
 
 
-async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("👋 Üdv! A bot aktív. Használd a /status parancsot az állapot lekérdezéséhez.")
+def get_secret_or_default(name: str, default: str) -> str:
+    value = read_secret(name)
+    return value if value else default
 
 
-async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("📊 A bot fut és figyel. IB kapcsolódás jelenleg nincs inicializálva.")
+# Telegram parancskezelő: /status
+async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("🤖 FRX bot fut és válaszol. Minden rendben.")
 
 
-async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("❓ Ismeretlen parancs. Próbáld meg: /status")
-
-
-async def run():
-    init_telegram_credentials()
-
-    telegram_token = read_secret("telegram_bot_token")
+def main():
+    telegram_token = get_secret_or_default("telegram_bot_token", "")
     if not telegram_token:
-        print("❌ Nincs Telegram token")
+        print("❌ Telegram token hiányzik.")
         return
 
-    send_telegram("🚀 Bot fut és várja a parancsokat...")
+    # Opcionális: IB csatlakozási adatok (még nem használjuk)
+    ib_host = get_secret_or_default("ib_host", "127.0.0.1")
+    ib_port = int(get_secret_or_default("ib_port", "7497"))
+    ib_client_id = int(get_secret_or_default("ib_client_id", "1"))
+
+    send_telegram(f"🤖 FRX bot elindult.\n📡 Csatlakozás: {ib_host}:{ib_port}, clientId={ib_client_id}")
 
     app = ApplicationBuilder().token(telegram_token).build()
+    app.add_handler(CommandHandler("status", status_command))
 
-    app.add_handler(CommandHandler("start", start_handler))
-    app.add_handler(CommandHandler("status", status_handler))
-    app.add_handler(MessageHandler(filters.COMMAND, unknown))  # új: ismeretlen parancsok kezelése
-
-    await app.run_polling()
+    print("🚀 Bot fut és várja a parancsokat...")
+    app.run_polling()  # <- nem async!
 
 
 if __name__ == "__main__":
-    asyncio.run(run())
+    main()
