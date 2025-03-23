@@ -27,15 +27,17 @@ async def ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def price_logger():
-    price = await fetch_price(PAIR)
-    timestamp = datetime.utcnow().isoformat()
-    log_entry = f"{timestamp} {PAIR} {price}\n"
-    try:
-        os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
-        with open(LOG_FILE, "a") as f:
-            f.write(log_entry)
-    except Exception as e:
-        print(f"❌ LOGGING ERROR: {e}")
+    while True:
+        price = await fetch_price(PAIR)
+        timestamp = datetime.utcnow().isoformat()
+        log_entry = f"{timestamp} {PAIR} {price}\n"
+        try:
+            os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
+            with open(LOG_FILE, "a") as f:
+                f.write(log_entry)
+        except Exception as e:
+            print(f"❌ LOGGING ERROR: {e}")
+        await asyncio.sleep(LOG_INTERVAL)  # Várj a következő iteráció előtt
 
 
 async def main():
@@ -47,15 +49,11 @@ async def main():
     app.add_handler(CommandHandler("status", status))
     app.add_handler(CommandHandler("ask", ask))
 
-    # Indítsd el a price_logger()-t egy külön szálon
-    await price_logger()
-
-    # Telegram polling indítása
-    print("MAIN: sending Telegram start message...")
-    await asyncio.to_thread(tg.send_telegram, "🤖 Forex bot elindult és figyel.")
-    print("MAIN: Telegram message sent.")
-    await app.run_polling()  # Indítsd el az eseménykezelést
+    # Két aszinkron feladat futtatása egy időben: Telegram polling és price logger
+    asyncio.create_task(price_logger())  # Árfolyam loggolása
+    print("MAIN: starting Telegram bot polling...")
+    await app.run_polling()  # Telegram bot polling indítása
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()  # Ha már futó eseményhurok van, akkor ezt használjuk
+    loop = asyncio.get_event_loop()
     loop.run_until_complete(main())  # Futtasd a fő aszinkron funkciót
