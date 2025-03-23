@@ -12,6 +12,7 @@ import modules.telegram_sender as tg
 from modules.fetch import fetch_price
 
 PAIR = "EURUSD"
+LOG_INTERVAL = 60  # másodperc
 LOG_FILE = os.path.join(os.path.dirname(__file__), "logs", "price_log.txt")
 
 
@@ -26,16 +27,17 @@ async def ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def price_logger():
-    """A módosított price_logger, amely csak egyszeri adatgyűjtést végez"""
-    price = await fetch_price(PAIR)
-    timestamp = datetime.utcnow().isoformat()
-    log_entry = f"{timestamp} {PAIR} {price}\n"
-    try:
-        os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
-        with open(LOG_FILE, "a") as f:
-            f.write(log_entry)
-    except Exception as e:
-        print(f"❌ LOGGING ERROR: {e}")
+    while True:
+        price = await fetch_price(PAIR)
+        timestamp = datetime.utcnow().isoformat()
+        log_entry = f"{timestamp} {PAIR} {price}\n"
+        try:
+            os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
+            with open(LOG_FILE, "a") as f:
+                f.write(log_entry)
+        except Exception as e:
+            print(f"❌ LOGGING ERROR: {e}")
+        await asyncio.sleep(LOG_INTERVAL)
 
 
 async def main():
@@ -47,17 +49,13 @@ async def main():
     app.add_handler(CommandHandler("status", status))
     app.add_handler(CommandHandler("ask", ask))
 
-    # A price_logger most már csak egyszer fut le
-    await price_logger()
-
-    print("MAIN: sending Telegram start message...")
-    await asyncio.to_thread(tg.send_telegram, "🤖 Forex bot elindult és figyel.")
-    print("MAIN: Telegram message sent.")
-
-    # Alkalmazás futtatása (bot működés közben)
-    await app.run_polling()
+    # Az eseményhurok kezelése egyetlen futó hurokban történik
+    await asyncio.gather(price_logger(), app.run_polling())
 
 
 if __name__ == "__main__":
-    # A price_logger csak egyszer fog lefutni
-    asyncio.run(main())
+    # Eseményhurok elindítása az asyncio-ban
+    if not asyncio.get_event_loop().is_running():
+        asyncio.run(main())
+    else:
+        print("Event loop already running, cannot start another.")
