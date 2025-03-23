@@ -1,10 +1,10 @@
 import os
 import requests
-import base64
 from google.cloud import secretmanager
 
 TELEGRAM_TOKEN = None
 TELEGRAM_CHAT_ID = None
+
 
 def get_project_id():
     try:
@@ -17,6 +17,7 @@ def get_project_id():
             return r.text
     except Exception:
         return os.environ.get("PROJECT_ID", None)
+
 
 def read_secret(name):
     try:
@@ -34,6 +35,7 @@ def read_secret(name):
         print(f"❌ Hiba a titok beolvasásakor ({name}): {e}")
         return None
 
+
 def init_telegram_credentials():
     global TELEGRAM_TOKEN, TELEGRAM_CHAT_ID
 
@@ -47,6 +49,7 @@ def init_telegram_credentials():
         print("✅ Telegram tokenek betöltve")
     else:
         print("❌ Telegram tokenek hiányoznak vagy hibásak")
+
 
 def send_telegram(message: str):
     init_telegram_credentials()
