@@ -3,13 +3,13 @@ import asyncio
 from datetime import datetime
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-from modules.telegram import send_telegram
+from modules.telegram_sender import send_telegram
 from modules.fetch import fetch_price
 
 PAIR = "EURUSD"
 LOG_INTERVAL = 60  # másodperc
 
-# Dinamikus log útvonal
+# Dinamikus logfájl elérési útvonal
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 LOG_DIR = os.path.join(BASE_DIR, "logs")
 LOG_FILE = os.path.join(LOG_DIR, "price_log.txt")
