@@ -1,6 +1,6 @@
 import asyncio
 from ib_insync import IB, Stock
-from modules.telegram_notifier import send_telegram, init_telegram_credentials, read_secret
+from modules.telegram_sender import send_telegram, init_telegram_credentials, read_secret
 
 
 async def main():
