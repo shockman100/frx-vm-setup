@@ -54,8 +54,15 @@ async def main():
     print("MAIN: sending Telegram start message...")
     await asyncio.to_thread(tg.send_telegram, "🤖 Forex bot elindult és figyel.")
     print("MAIN: Telegram message sent.")
+
+    # Az alkalmazás eseményhurokban futtatása
     await app.run_polling()  # Indítsd el az eseménykezelést
 
+
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()  # Ha már futó eseményhurok van, akkor ezt használjuk
-    loop.run_until_complete(main())  # Futtasd a fő aszinkron funkciót
+    # Ellenőrizzük, hogy már fut-e eseményhurok, és annak megfelelően indítjuk a kódot
+    try:
+        asyncio.get_event_loop().run_until_complete(main())
+    except RuntimeError as e:
+        if 'This event loop is already running' in str(e):
+            print("❌ Az eseményhurok már fut. Indítás egy új körben nem szükséges.")
