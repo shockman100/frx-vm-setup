@@ -8,7 +8,7 @@ import os
 
 PAIR = "EURUSD"
 LOG_INTERVAL = 60  # másodperc
-LOG_FILE = "/home/shockman100/forex-bot/bot/logs/price_log.txt"  # teljes elérési út
+LOG_FILE = "/home/shockman100/forex-bot/bot/logs/price_log.txt"
 
 async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("✅ Bot is running.")
