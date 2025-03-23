@@ -1,56 +1,45 @@
-import os
-import sys
 import asyncio
-from datetime import datetime
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-
-# Modulútvonal beállítása
-sys.path.append(os.path.dirname(__file__))
-
-import modules.telegram_sender as tg
-from modules.fetch import fetch_price
-
-PAIR = "EURUSD"
-LOG_FILE = os.path.join(os.path.dirname(__file__), "logs", "price_log.txt")
-
-
-async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("✅ Bot is running.")
-
-
-async def ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    pair = context.args[0].upper() if context.args else PAIR
-    price = await fetch_price(pair)
-    await update.message.reply_text(f"{pair} price: {price}")
-
-
-async def price_logger():
-    price = await fetch_price(PAIR)
-    timestamp = datetime.utcnow().isoformat()
-    log_entry = f"{timestamp} {PAIR} {price}\n"
-    try:
-        os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
-        with open(LOG_FILE, "a") as f:
-            f.write(log_entry)
-    except Exception as e:
-        print(f"❌ LOGGING ERROR: {e}")
+from ib_insync import IB, Stock
+from modules.telegram_notifier import send_telegram, init_telegram_credentials, read_secret
 
 
 async def main():
-    print("MAIN: initializing bot")
-    tg.init_telegram_credentials()
+    init_telegram_credentials()
 
-    await price_logger()
-    tg.send_telegram("🤖 Forex bot elindult és figyel.")
+    try:
+        # Titkos adatok beolvasása a GCP Secret Managerből
+        ib_host = read_secret("ib_host") or "127.0.0.1"
+        ib_port = int(read_secret("ib_port") or 7497)
+        ib_client_id = int(read_secret("ib_client_id") or 1)
 
-    app = ApplicationBuilder().token(tg.TELEGRAM_TOKEN).build()
-    app.add_handler(CommandHandler("status", status))
-    app.add_handler(CommandHandler("ask", ask))
+        print(f"📡 Csatlakozás IB Gateway-hez ({ib_host}:{ib_port}, clientId={ib_client_id})...")
+        ib = IB()
+        ib.connect(ib_host, ib_port, clientId=ib_client_id)
+        print("✅ Kapcsolódva Interactive Brokers-hez")
 
-    await app.run_polling()
+        # Példa: AAPL figyelése
+        stock = Stock('AAPL', 'SMART', 'USD')
+        ib.qualifyContracts(stock)
+        ticker = ib.reqMktData(stock)
 
-# Javított rész:
+        # Árfigyelés és trigger
+        while True:
+            ib.sleep(1)
+            price = ticker.marketPrice()
+            print(f"AAPL árfolyam: {price}")
+
+            if price and price > 200:  # Itt adhatod meg a saját trigger feltételed
+                msg = f"📈 Az AAPL árfolyam elérte a {price:.2f} USD-t!"
+                print(msg)
+                send_telegram(msg)
+                break
+
+        ib.disconnect()
+
+    except Exception as e:
+        send_telegram(f"❌ Hiba történt a botban: {e}")
+        print(f"❌ Hiba: {e}")
+
+
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+    asyncio.run(main())
