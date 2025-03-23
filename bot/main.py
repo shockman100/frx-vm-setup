@@ -1,69 +1,72 @@
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 from modules.telegram_sender import send_telegram, read_secret
-from ib_insync import IB, Stock
-
+from ib_insync import IB, Forex, util
 import asyncio
 
-def get_secret_or_default(name: str, default: str) -> str:
-    value = read_secret(name)
-    return value if value else default
 
-# Telegram parancskezelő: /status
+# IB csatlakozás próbálása
+async def connect_ib():
+    ib_host = read_secret("ib_host") or "127.0.0.1"
+    ib_port = int(read_secret("ib_port") or 7497)
+    ib_client_id = int(read_secret("ib_client_id") or 1)
+
+    ib = IB()
+    try:
+        await ib.connectAsync(ib_host, ib_port, clientId=ib_client_id, timeout=5)
+        return ib
+    except Exception as e:
+        print(f"❌ IB kapcsolódási hiba: {e}")
+        return None
+
+
+# /status parancs kezelése
 async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🤖 FRX bot fut és válaszol. Minden rendben.")
 
-# Telegram parancskezelő: /price EURUSD
-async def price_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    symbol = "EURUSD"  # default
-    if context.args:
-        symbol = context.args[0].upper()
 
-    await update.message.reply_text(f"🔍 Árfolyam lekérése: {symbol}...")
+# /price parancs kezelése (pl. EUR.USD árfolyam)
+async def price_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    ib = await connect_ib()
+    if not ib:
+        await update.message.reply_text("⚠️ IB Gateway nem elérhető.")
+        return
 
     try:
-        ib = IB()
-        ib_host = get_secret_or_default("ib_host", "127.0.0.1")
-        ib_port = int(get_secret_or_default("ib_port", "7497"))
-        ib_client_id = int(get_secret_or_default("ib_client_id", "1"))
-
-        ib.connect(ib_host, ib_port, clientId=ib_client_id)
-
-        contract = Forex(symbol)
-        ticker = ib.reqMktData(contract, snapshot=True)
-
-        # Várjuk meg az adatot
-        ib.sleep(2)
-
-        if ticker.bid is not None and ticker.ask is not None:
-            msg = f"💱 {symbol} árfolyam:\n• Bid: {ticker.bid}\n• Ask: {ticker.ask}"
+        contract = Forex("EURUSD")
+        ticker = ib.reqMktData(contract, "", False, False)
+        await asyncio.sleep(2)
+        price = ticker.marketPrice()
+        if price:
+            await update.message.reply_text(f"💱 EUR/USD: {price:.5f}")
         else:
-            msg = f"⚠️ Nem érkezett árfolyamadat a {symbol} instrumentumhoz."
-
-        await update.message.reply_text(msg)
+            await update.message.reply_text("⚠️ Nem sikerült lekérni az árfolyamot.")
+    finally:
         ib.disconnect()
 
-    except Exception as e:
-        await update.message.reply_text(f"❌ Hiba történt: {e}")
+
+# Ismeretlen üzenet kezelése
+async def unknown_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("🤔 Ismeretlen parancs. Próbáld: /status vagy /price")
+
 
 def main():
-    telegram_token = get_secret_or_default("telegram_bot_token", "")
+    telegram_token = read_secret("telegram_bot_token")
     if not telegram_token:
         print("❌ Telegram token hiányzik.")
         return
 
-    ib_host = get_secret_or_default("ib_host", "127.0.0.1")
-    ib_port = int(get_secret_or_default("ib_port", "7497"))
-    ib_client_id = int(get_secret_or_default("ib_client_id", "1"))
-
-    send_telegram(f"🤖 FRX bot elindult.\n📡 Csatlakozás: {ib_host}:{ib_port}, clientId={ib_client_id}")
+    send_telegram("🤖 FRX bot elindult. Készen áll a parancsokra.")
 
     app = ApplicationBuilder().token(telegram_token).build()
     app.add_handler(CommandHandler("status", status_command))
-    app.add_handler(CommandHandler("price", price_command))  # új parancs
+    app.add_handler(CommandHandler("price", price_command))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, unknown_message))
+    app.add_handler(MessageHandler(filters.COMMAND, unknown_message))  # /ismeretlen
 
     print("🚀 Bot fut és várja a parancsokat...")
     app.run_polling()
+
 
 if __name__ == "__main__":
     main()
