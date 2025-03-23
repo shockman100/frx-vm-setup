@@ -37,23 +37,24 @@ async def price_logger():
         print(f"❌ LOGGING ERROR: {e}")
 
 
-async def main():
+def main():
     print("MAIN: initializing bot")
 
     tg.init_telegram_credentials()
 
-    # Egyszeri árfolyam logolás
-    await price_logger()
+    # Egyszeri logolás külön loopban
+    asyncio.run(price_logger())
 
     tg.send_telegram("🤖 Forex bot elindult és figyel.")
 
-    # Bot létrehozása és indítása
+    # Bot létrehozása
     app = ApplicationBuilder().token(tg.TELEGRAM_TOKEN).build()
     app.add_handler(CommandHandler("status", status))
     app.add_handler(CommandHandler("ask", ask))
 
-    await app.run_polling()  # VÉGRE async módon hívjuk meg!
+    # ⚠️ FONTOS: ezt így HAGYD szinkronként!
+    app.run_polling()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
