@@ -1,11 +1,18 @@
 #!/bin/bash
 
-set -e  # Hiba esetén kilép
+set -e  # Ha hiba van, azonnal leáll
 
 REPO_URL="https://github.com/shockman100/frx-vm-setup.git"
 INSTALL_DIR="/home/shockman100/forex-bot"
 SERVICE_NAME="frxbot"
 PYTHON_SCRIPT="$INSTALL_DIR/bot/main.py"
+
+# Ne futtassuk, ha a törlendő könyvtárban állunk
+if [ "$PWD" = "$INSTALL_DIR" ]; then
+  echo "❌ Ne a forex-bot mappából futtasd ezt a szkriptet!"
+  echo "➡️  Használd: cd ~ ; bash init.sh"
+  exit 1
+fi
 
 echo ">> Előző telepítés eltávolítása (ha van)..."
 sudo rm -rf "$INSTALL_DIR"
