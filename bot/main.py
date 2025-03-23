@@ -12,6 +12,7 @@ import modules.telegram_sender as tg
 from modules.fetch import fetch_price
 
 PAIR = "EURUSD"
+LOG_INTERVAL = 60  # másodperc
 LOG_FILE = os.path.join(os.path.dirname(__file__), "logs", "price_log.txt")
 
 
@@ -26,7 +27,6 @@ async def ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def price_logger():
-    """Egyszeri adatgyűjtés az árfolyamról és logolás a LOG_FILE-ba."""
     price = await fetch_price(PAIR)
     timestamp = datetime.utcnow().isoformat()
     log_entry = f"{timestamp} {PAIR} {price}\n"
@@ -41,31 +41,23 @@ async def price_logger():
 async def main():
     print("MAIN: launching event loop...")
 
-    # A titkos adatok beolvasása a secrets fájlból
     tg.init_telegram_credentials()
 
-    # Ellenőrizzük, hogy a token sikeresen beolvasható-e
-    if not tg.TELEGRAM_TOKEN:
-        print("HIBA: A Telegram token nincs beolvasva a secrets fájlból!")
-        return
-
-    # Bot inicializálása
     app = ApplicationBuilder().token(tg.TELEGRAM_TOKEN).build()
     app.add_handler(CommandHandler("status", status))
     app.add_handler(CommandHandler("ask", ask))
 
-    # Egyszeri árfolyam lekérés és logolás
+    # Árfolyam egyszeri logolása
     await price_logger()
 
+    # Indulási üzenet küldése
     print("MAIN: sending Telegram start message...")
     await asyncio.to_thread(tg.send_telegram, "🤖 Forex bot elindult és figyel.")
     print("MAIN: Telegram message sent.")
 
-    # Bot eseménykezelésének indítása (polling)
+    # Bot polling indítása
     await app.run_polling()
 
 
 if __name__ == "__main__":
-    # Az asyncio.run(main()) elindítja az aszinkron fő függvényt, 
-    # amelyben a bot és a price_logger feladata lefut.
     asyncio.run(main())
