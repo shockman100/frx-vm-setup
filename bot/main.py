@@ -5,7 +5,7 @@ from datetime import datetime
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-# Modulútvonal beállítása
+# Modulútvonal beállítása (hogy a 'modules' könyvtár működjön)
 sys.path.append(os.path.dirname(__file__))
 
 import modules.telegram_sender as tg
@@ -26,18 +26,6 @@ async def ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"{pair} price: {price}")
 
 
-async def price_logger():
-    price = await fetch_price(PAIR)
-    timestamp = datetime.utcnow().isoformat()
-    log_entry = f"{timestamp} {PAIR} {price}\n"
-    try:
-        os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
-        with open(LOG_FILE, "a") as f:
-            f.write(log_entry)
-    except Exception as e:
-        print(f"❌ LOGGING ERROR: {e}")
-
-
 async def main():
     print("MAIN: launching event loop...")
 
@@ -47,22 +35,12 @@ async def main():
     app.add_handler(CommandHandler("status", status))
     app.add_handler(CommandHandler("ask", ask))
 
-    # Indítsd el a price_logger()-t egy külön szálon
-    await price_logger()
-
-    # Telegram polling indítása
     print("MAIN: sending Telegram start message...")
     await asyncio.to_thread(tg.send_telegram, "🤖 Forex bot elindult és figyel.")
     print("MAIN: Telegram message sent.")
 
-    # Az alkalmazás eseményhurokban futtatása
-    await app.run_polling()  # Indítsd el az eseménykezelést
+    await app.run_polling()
 
 
 if __name__ == "__main__":
-    # Ellenőrizzük, hogy már fut-e eseményhurok, és annak megfelelően indítjuk a kódot
-    try:
-        asyncio.get_event_loop().run_until_complete(main())
-    except RuntimeError as e:
-        if 'This event loop is already running' in str(e):
-            print("❌ Az eseményhurok már fut. Indítás egy új körben nem szükséges.")
+    asyncio.run(main())
