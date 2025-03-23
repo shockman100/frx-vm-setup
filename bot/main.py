@@ -1,7 +1,7 @@
 import os
 import sys
-import asyncio
 from datetime import datetime
+import asyncio
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
@@ -12,7 +12,6 @@ import modules.telegram_sender as tg
 from modules.fetch import fetch_price
 
 PAIR = "EURUSD"
-LOG_INTERVAL = 60  # másodperc
 LOG_FILE = os.path.join(os.path.dirname(__file__), "logs", "price_log.txt")
 
 
@@ -38,8 +37,8 @@ async def price_logger():
         print(f"❌ LOGGING ERROR: {e}")
 
 
-async def main():
-    print("MAIN: launching event loop...")
+def main():
+    print("MAIN: launching bot...")
 
     tg.init_telegram_credentials()
 
@@ -47,25 +46,15 @@ async def main():
     app.add_handler(CommandHandler("status", status))
     app.add_handler(CommandHandler("ask", ask))
 
-    await price_logger()
+    # Árfolyam logolás aszinkron módon – külön eseményként
+    asyncio.run(price_logger())
 
-    print("MAIN: sending Telegram start message...")
-    await asyncio.to_thread(tg.send_telegram, "🤖 Forex bot elindult és figyel.")
-    print("MAIN: Telegram message sent.")
+    # Üzenet küldése külön szálon, mert nem async
+    tg.send_telegram("🤖 Forex bot elindult és figyel.")
 
-    await app.run_polling()
+    # Bot polling – saját loopot kezel, nincs szükség asyncio.run-re
+    app.run_polling()
 
 
-# FUTÁS BIZTONSÁGOSAN — BÁRMILYEN KÖRNYEZETBEN
 if __name__ == "__main__":
-    import threading
-
-    try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            # Ha már fut egy loop, új szálat nyitunk
-            threading.Thread(target=lambda: asyncio.run(main())).start()
-        else:
-            loop.run_until_complete(main())
-    except RuntimeError:
-        asyncio.run(main())
+    main()
