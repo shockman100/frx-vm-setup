@@ -5,7 +5,7 @@ from datetime import datetime
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-# Modulútvonal beállítása (hogy a 'modules' könyvtár működjön)
+# Modulútvonal hozzáadása, hogy a 'modules' könyvtár importálható legyen
 sys.path.append(os.path.dirname(__file__))
 
 from modules import send_telegram as tg
