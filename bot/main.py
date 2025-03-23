@@ -1,49 +1,61 @@
+import os
+import sys
 import asyncio
+from datetime import datetime
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-from datetime import datetime
 
-# API vagy más módon az árfolyam lekérése (pl. EURUSD)
-async def fetch_price(pair="EURUSD"):
-    print(f"Fetching price for {pair}...")
-    await asyncio.sleep(2)  # Szimulált várakozás, itt kellene az API vagy más logika
-    return 1.2345  # Példa ár
+# Modulútvonal beállítása
+sys.path.append(os.path.dirname(__file__))
 
-# Telegram /start parancs kezelése
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+import modules.telegram_sender as tg
+from modules.fetch import fetch_price
+
+PAIR = "EURUSD"
+LOG_INTERVAL = 60  # másodperc
+LOG_FILE = os.path.join(os.path.dirname(__file__), "logs", "price_log.txt")
+
+
+async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("✅ Bot is running.")
 
-# Telegram /ask parancs kezelése, mely árfolyamot kér
+
 async def ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    pair = context.args[0].upper() if context.args else "EURUSD"
+    pair = context.args[0].upper() if context.args else PAIR
     price = await fetch_price(pair)
-    await update.message.reply_text(f"{pair} current price: {price}")
+    await update.message.reply_text(f"{pair} price: {price}")
 
-# Eseményhurok, amely folyamatosan frissíti az árfolyamot
+
 async def price_logger():
-    while True:
-        price = await fetch_price()  # Lekérjük az árfolyamot
-        timestamp = datetime.utcnow().isoformat()
-        log_entry = f"{timestamp} EURUSD {price}\n"  # Árfolyam logolása
-        try:
-            with open("price_log.txt", "a") as f:
-                f.write(log_entry)
-        except Exception as e:
-            print(f"❌ LOGGING ERROR: {e}")
-        await asyncio.sleep(60)  # 1 percenként frissít
+    price = await fetch_price(PAIR)
+    timestamp = datetime.utcnow().isoformat()
+    log_entry = f"{timestamp} {PAIR} {price}\n"
+    try:
+        os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
+        with open(LOG_FILE, "a") as f:
+            f.write(log_entry)
+    except Exception as e:
+        print(f"❌ LOGGING ERROR: {e}")
 
-# Telegram bot futtatása és figyelés
+
 async def main():
-    print("Bot is starting...")
+    print("MAIN: launching event loop...")
 
-    # Az alkalmazás tokenjét secretből szerezd meg (például környezeti változókból)
-    app = ApplicationBuilder().token("YOUR_BOT_TOKEN").build()  # Ne felejtsd el cserélni a helyes tokenre
-    app.add_handler(CommandHandler("start", start))
+    tg.init_telegram_credentials()
+
+    app = ApplicationBuilder().token(tg.TELEGRAM_TOKEN).build()
+    app.add_handler(CommandHandler("status", status))
     app.add_handler(CommandHandler("ask", ask))
 
-    # Két feladat párhuzamos futtatása: árfolyam figyelés és bot
-    asyncio.create_task(price_logger())  # Árfolyam figyelése
-    await app.run_polling()  # Telegram bot futtatása
+    # Indítsd el a price_logger()-t egy külön szálon
+    await price_logger()
+
+    # Telegram polling indítása
+    print("MAIN: sending Telegram start message...")
+    await asyncio.to_thread(tg.send_telegram, "🤖 Forex bot elindult és figyel.")
+    print("MAIN: Telegram message sent.")
+    await app.run_polling()  # Indítsd el az eseménykezelést
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    loop = asyncio.get_event_loop()  # Ha már futó eseményhurok van, akkor ezt használjuk
+    loop.run_until_complete(main())  # Futtasd a fő aszinkron funkciót
