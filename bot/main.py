@@ -49,13 +49,15 @@ async def main():
     app.add_handler(CommandHandler("status", status))
     app.add_handler(CommandHandler("ask", ask))
 
-    # A price_logger futtatása a Telegram pollinggal egy közös eseményhurok alatt
-    await asyncio.gather(price_logger(), app.run_polling())
+    asyncio.create_task(price_logger())  # A price logger folyamatosan fut
+
+    print("MAIN: sending Telegram start message...")
+    await asyncio.to_thread(tg.send_telegram, "🤖 Forex bot elindult és figyel.")
+    print("MAIN: Telegram message sent.")
+
+    await app.run_polling()  # Eseménykezelés elindítása
 
 
 if __name__ == "__main__":
-    # Ha már fut egy eseményhurok, akkor nem indítunk újat
-    if not asyncio.get_event_loop().is_running():
-        asyncio.run(main())
-    else:
-        print("Event loop already running, cannot start another.")
+    loop = asyncio.get_event_loop()  # Get the existing event loop
+    loop.run_until_complete(main())  # Run the main function with the existing loop
