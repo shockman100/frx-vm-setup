@@ -50,7 +50,13 @@ async def main():
 
     await app.run_polling()
 
-
-# ⚠️ NE használj loop.run_until_complete! Python 3.11 alatt:
+# Javított rész:
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.create_task(main())
+    loop = asyncio.get_event_loop()
+    try:
+        loop.run_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        loop.close()
