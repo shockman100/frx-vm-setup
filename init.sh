@@ -2,6 +2,12 @@
 
 set -e  # Hibára álljon le
 
+# === 🌐 Naplózás bekapcsolása ===
+LOG_FILE="/var/log/frx-init.log"
+exec > >(tee -a "$LOG_FILE") 2>&1
+echo "📜 Telepítés naplózása: $LOG_FILE"
+echo "🕒 $(date) – Telepítés indítása..."
+
 REPO_URL="https://github.com/shockman100/frx-vm-setup.git"
 CLONE_DIR="/tmp/frx-vm-setup"
 INSTALL_DIR="/home/shockman100/forex-bot"
@@ -12,9 +18,9 @@ IBG_DIR="/opt/ibgateway"
 IBG_USER_DIR="/home/shockman100/ibgateway"
 IBG_VERSION="1032"
 
-### 🔄 ÖNFRISSÍTÉS
+# === 🔄 ÖNFRISSÍTÉS ===
 if [ "$SELF_UPDATED" != "1" ]; then
-  echo "🔄 Init.sh önfrissítés a GitHubról..."
+  echo "🕒 $(date) – Init.sh önfrissítés a GitHubról..."
   rm -rf "$CLONE_DIR"
   git clone "$REPO_URL" "$CLONE_DIR"
   echo "🚀 Frissített init.sh futtatása..."
@@ -22,8 +28,8 @@ if [ "$SELF_UPDATED" != "1" ]; then
   exit $?
 fi
 
-### ⬇️ IB Gateway telepítése
-echo "⬇️ IB Gateway letöltése és telepítése..."
+# === ⬇️ IB Gateway telepítése ===
+echo "🕒 $(date) – IB Gateway letöltése és telepítése..."
 sudo mkdir -p "$IBG_DIR"
 sudo mkdir -p "$IBG_USER_DIR"
 cd /tmp
@@ -31,7 +37,8 @@ wget -q https://download2.interactivebrokers.com/installers/ibgateway/${IBG_VERS
 chmod +x ibg.sh
 sudo ./ibg.sh -q -overwrite -dir "$IBG_DIR" < /dev/null
 
-echo "⚙️ IB Gateway konfigurálása..."
+# === ⚙️ IB Gateway konfigurálása ===
+echo "🕒 $(date) – IB Gateway konfigurálása..."
 cat <<EOF > "$IBG_USER_DIR/jts.ini"
 [Logon]
 username=$(gcloud secrets versions access latest --secret="ib_username")
@@ -43,7 +50,8 @@ suppresswarning=true
 exitonlogout=true
 EOF
 
-echo "🛠️ IB Gateway systemd szolgáltatás létrehozása..."
+# === 🛠️ IB Gateway systemd szolgáltatás ===
+echo "🕒 $(date) – IB Gateway systemd szolgáltatás létrehozása..."
 sudo tee /etc/systemd/system/ibgateway.service > /dev/null <<EOF
 [Unit]
 Description=IB Gateway headless
@@ -65,20 +73,20 @@ sudo systemctl enable ibgateway.service
 sudo systemctl restart ibgateway.service
 echo "✅ IB Gateway elindítva."
 
-### 🤖 Bot telepítése
-echo ">> Előző bot telepítés eltávolítása (ha van)..."
+# === 🤖 Bot telepítése ===
+echo "🕒 $(date) – Előző bot telepítés eltávolítása (ha van)..."
 sudo rm -rf "$INSTALL_DIR"
 
-echo ">> Repo klónozása..."
+echo "🕒 $(date) – Repo klónozása..."
 git clone "$REPO_URL" "$INSTALL_DIR"
 
-echo ">> Python csomagok telepítése..."
+echo "🕒 $(date) – Python csomagok telepítése..."
 pip3 install --break-system-packages -r "$INSTALL_DIR/bot/requirements.txt"
 
-echo ">> Jogosultság beállítása..."
+echo "🕒 $(date) – Jogosultság beállítása..."
 sudo chown -R shockman100:shockman100 "$INSTALL_DIR"
 
-echo ">> frxbot systemd szolgáltatás létrehozása..."
+echo "🕒 $(date) – frxbot systemd szolgáltatás létrehozása..."
 sudo tee "$SERVICE_FILE" > /dev/null <<EOF
 [Unit]
 Description=FRX bot
@@ -103,3 +111,21 @@ sudo systemctl restart "$SERVICE_NAME"
 echo "✅ A bot és az IB Gateway telepítve és elindítva."
 echo "📡 Ellenőrzés: sudo journalctl -u $SERVICE_NAME -f"
 echo "🌐 IB port: netstat -tuln | grep 7497"
+
+# === 📩 TELEGRAM ÉRTESÍTÉS A VÉGÉN ===
+echo "🕒 $(date) – Telegram értesítés küldése..."
+
+PROJECT_ID=$(curl -s -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/project/project-id)
+TELEGRAM_TOKEN=$(gcloud secrets versions access latest --secret="telegram_bot_token" --project="$PROJECT_ID")
+TELEGRAM_CHAT_ID=$(gcloud secrets versions access latest --secret="telegram_chat_id" --project="$PROJECT_ID")
+
+if [[ -n "$TELEGRAM_TOKEN" && -n "$TELEGRAM_CHAT_ID" ]]; then
+  curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+    -d chat_id="$TELEGRAM_CHAT_ID" \
+    -d text="✅ Telepítés befejezve a VM-en! Ellenőrizd: journalctl -u frxbot -f"
+  echo "📨 Telegram értesítés elküldve."
+else
+  echo "⚠️ Telegram token vagy chat_id hiányzik – nem küldhető értesítés."
+fi
+
+echo "🏁 Kész. Log: $LOG_FILE"
