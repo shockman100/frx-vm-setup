@@ -34,11 +34,11 @@ echo "🕒 $(date) – Java futtatókörnyezet telepítése (IB Gateway-hez szü
 sudo apt update
 sudo apt install -y default-jre
 
-echo "🕒 $(date) – IB Gateway letöltése és telepítése..."
+echo "🕒 $(date) – IB Gateway stabil verzió letöltése és telepítése..."
 sudo mkdir -p "$IBG_DIR"
 sudo mkdir -p "$IBG_USER_DIR"
 cd /tmp
-wget -q https://download2.interactivebrokers.com/installers/ibgateway/${IBG_VERSION}-standalone/ibgateway-${IBG_VERSION}-standalone-linux-x64.sh -O ibg.sh
+wget -q https://download2.interactivebrokers.com/installers/ibgateway/stable-standalone/ibgateway-stable-standalone-linux-x64.sh -O ibg.sh
 chmod +x ibg.sh
 sudo ./ibg.sh -q -overwrite -dir "$IBG_DIR" < /dev/null
 
