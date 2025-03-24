@@ -65,7 +65,7 @@ After=network.target
 
 [Service]
 User=shockman100
-ExecStart=$IBG_DIR/ibgateway
+ExecStart=$IBG_DIR/ibgateway --headless -gwsilent -jts $IBG_USER_DIR/jts.ini
 WorkingDirectory=$IBG_USER_DIR
 Restart=always
 TimeoutSec=30
