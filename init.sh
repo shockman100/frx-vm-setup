@@ -56,7 +56,6 @@ suppresswarning=true
 exitonlogout=true
 EOF
 
-# === 🛠️ IB Gateway systemd szolgáltatás ===
 echo "🕒 $(date) – IB Gateway systemd szolgáltatás létrehozása..."
 sudo tee /etc/systemd/system/ibgateway.service > /dev/null <<EOF
 [Unit]
@@ -73,6 +72,7 @@ TimeoutSec=30
 [Install]
 WantedBy=multi-user.target
 EOF
+
 
 
 sudo systemctl daemon-reload
