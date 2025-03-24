@@ -65,7 +65,7 @@ After=network.target
 
 [Service]
 User=shockman100
-ExecStart=$IBG_DIR/ibgatewaystart.sh
+ExecStart=$IBG_DIR/ibgateway
 WorkingDirectory=$IBG_USER_DIR
 Restart=always
 TimeoutSec=30
@@ -73,6 +73,7 @@ TimeoutSec=30
 [Install]
 WantedBy=multi-user.target
 EOF
+
 
 sudo systemctl daemon-reload
 sudo systemctl enable ibgateway.service
