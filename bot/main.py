@@ -6,6 +6,7 @@ import requests
 
 from modules import telegram_sender
 
+
 # --- Globális állapotváltozók ---
 status_flags = {
     "ib_loop_active": False,
