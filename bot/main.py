@@ -1,99 +1,84 @@
-from telegram import Update
-from telegram.ext import (
-    ApplicationBuilder,
-    CommandHandler,
-    MessageHandler,
-    ContextTypes,
-    filters,
-)
-from ib_insync import IB, Forex
+import threading
 import asyncio
-import subprocess
+import time
+import logging
+import requests
+
+from modules import telegram_sender
+
+# --- Globális állapotváltozók ---
+status_flags = {
+    "ib_loop_active": False,
+    "telegram_loop_active": False,
+}
 
 
-# 🔐 Titok beolvasása gcloud-ból
-def read_secret(name: str) -> str:
-    try:
-        result = subprocess.run(
-            ["gcloud", "secrets", "versions", "access", "latest", f"--secret={name}"],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        return result.stdout.strip()
-    except subprocess.CalledProcessError:
-        print(f"❌ Hiba a titok beolvasásakor ({name})")
-        return ""
+# === 1. TELEGRAM BOT THREAD ===
+def telegram_loop():
+    status_flags["telegram_loop_active"] = True
+    telegram_sender.send_telegram("🤖 Forex bot elindult. Írj /status parancsot az állapot lekérdezéséhez.")
+
+    last_update_id = None
+    while True:
+        try:
+            url = f"https://api.telegram.org/bot{telegram_sender.TELEGRAM_TOKEN}/getUpdates"
+            if last_update_id:
+                url += f"?offset={last_update_id + 1}"
+            response = requests.get(url, timeout=5)
+            updates = response.json().get("result", [])
+
+            for update in updates:
+                last_update_id = update["update_id"]
+                message = update.get("message", {})
+                text = message.get("text", "")
+                chat_id = message.get("chat", {}).get("id", "")
+
+                if text == "/status" and str(chat_id) == telegram_sender.TELEGRAM_CHAT_ID:
+                    msg = f"""📊 Állapotjelentés:
+- IB kommunikáció aktív: {'✅' if status_flags['ib_loop_active'] else '❌'}
+- Telegram modul aktív: {'✅' if status_flags['telegram_loop_active'] else '❌'}
+- Bot főszál fut: ✅"""
+                    telegram_sender.send_telegram(msg)
+
+        except Exception as e:
+            logging.warning(f"Telegram loop hiba: {e}")
+        time.sleep(3)
 
 
-def get_secret_or_default(name: str, default: str) -> str:
-    value = read_secret(name)
-    return value if value else default
+# === 2. IB KOMMUNIKÁCIÓS ASZINKRON LOOP ===
+async def ib_loop():
+    status_flags["ib_loop_active"] = True
+    while True:
+        # Például: árfolyam lekérdezése itt történne
+        print("📈 Árfolyam lekérdezés (IB)")
+        await asyncio.sleep(10)
 
 
-# 📡 IB árfolyam lekérés
-async def get_forex_price() -> str:
-    try:
-        ib = IB()
-        await ib.connectAsync(ib_host, ib_port, clientId=ib_client_id, timeout=5)
-
-        contract = Forex('EURUSD')
-        ticker = ib.reqMktData(contract, '', False, False)
-
-        # Várunk max. 2 másodpercet árra
-        for _ in range(20):
-            await asyncio.sleep(0.1)
-            if ticker.bid and ticker.ask:
-                break
-
-        bid = ticker.bid or 0
-        ask = ticker.ask or 0
-        await ib.disconnect()
-        return f"💶 EUR/USD árfolyam:\nBid: {bid:.5f}\nAsk: {ask:.5f}"
-
-    except Exception as e:
-        return f"❌ Hiba IB árfolyam lekérés közben: {e}"
+def start_ib_thread():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(ib_loop())
 
 
-# 📬 Telegram parancs: /status
-async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🤖 FRX bot fut és válaszol. Minden rendben.")
-
-
-# 📬 Telegram parancs: /price
-async def price_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = await get_forex_price()
-    await update.message.reply_text(msg)
-
-
-# 📬 Minden más szöveg
-async def unknown_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("❓ Ismeretlen parancs. Használható: /status, /price")
-
-
-# 🚀 Főprogram
+# === 3. FŐ THREAD ===
 def main():
-    global ib_host, ib_port, ib_client_id
+    print("🚀 Bot indul...")
+    telegram_sender.init_telegram_credentials()
 
-    telegram_token = get_secret_or_default("telegram_bot_token", "")
-    if not telegram_token:
-        print("❌ Telegram token hiányzik.")
-        return
+    # Indítjuk a Telegram szálat
+    t1 = threading.Thread(target=telegram_loop, name="TelegramThread", daemon=True)
+    t1.start()
 
-    ib_host = get_secret_or_default("ib_host", "127.0.0.1")
-    ib_port = int(get_secret_or_default("ib_port", "7497"))
-    ib_client_id = int(get_secret_or_default("ib_client_id", "1"))
+    # Indítjuk az IB aszinkron szálat
+    t2 = threading.Thread(target=start_ib_thread, name="IBThread", daemon=True)
+    t2.start()
 
-    print(f"📡 Csatlakozás: {ib_host}:{ib_port}, clientId={ib_client_id}")
-
-    app = ApplicationBuilder().token(telegram_token).build()
-    app.add_handler(CommandHandler("status", status_command))
-    app.add_handler(CommandHandler("price", price_command))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, unknown_message))
-
-    print("🚀 Bot fut és várja a parancsokat...")
-    app.run_polling()
-
+    # Fő loop: figyeli a szálakat
+    try:
+        while True:
+            time.sleep(5)
+    except KeyboardInterrupt:
+        print("🛑 Leállítás kérve...")
 
 if __name__ == "__main__":
     main()
