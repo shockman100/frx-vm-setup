@@ -30,6 +30,10 @@ if [ "$SELF_UPDATED" != "1" ]; then
 fi
 
 # === ⬇️ IB Gateway telepítése ===
+echo "🕒 $(date) – Java futtatókörnyezet telepítése (IB Gateway-hez szükséges)..."
+sudo apt update
+sudo apt install -y default-jre
+
 echo "🕒 $(date) – IB Gateway letöltése és telepítése..."
 sudo mkdir -p "$IBG_DIR"
 sudo mkdir -p "$IBG_USER_DIR"
