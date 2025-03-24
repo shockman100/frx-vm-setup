@@ -29,6 +29,30 @@ if [ "$SELF_UPDATED" != "1" ]; then
   exit $?
 fi
 
+# === 🖥️ Xvfb telepítése és systemd szolgáltatás ===
+echo "🕒 $(date) – Xvfb (virtuális kijelző) telepítése..."
+sudo apt install -y xvfb
+
+echo "🕒 $(date) – Xvfb systemd szolgáltatás létrehozása..."
+sudo tee /etc/systemd/system/xvfb.service > /dev/null <<EOF
+[Unit]
+Description=Headless Xvfb display
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/Xvfb :1 -screen 0 1024x768x24
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable xvfb
+sudo systemctl start xvfb
+echo "✅ Xvfb elindítva DISPLAY=:1 módban."
+
+
 # === ⬇️ IB Gateway telepítése ===
 echo "🕒 $(date) – Java futtatókörnyezet telepítése (IB Gateway-hez szükséges)..."
 sudo apt update
@@ -60,10 +84,11 @@ echo "🕒 $(date) – IB Gateway systemd szolgáltatás létrehozása..."
 sudo tee /etc/systemd/system/ibgateway.service > /dev/null <<EOF
 [Unit]
 Description=IB Gateway headless
-After=network.target
+After=network.target xvfb.service
 
 [Service]
 User=shockman100
+Environment=DISPLAY=:1
 ExecStart=$IBG_DIR/ibgateway --headless -gwsilent -jts $IBG_USER_DIR/jts.ini
 WorkingDirectory=$IBG_USER_DIR
 Restart=always
