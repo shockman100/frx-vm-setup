@@ -6,6 +6,7 @@ set -e  # Hibára álljon le
 LOG_FILE="$HOME/frx-init.log"
 exec > >(tee -a "$LOG_FILE") 2>&1
 echo "📜 Telepítés naplózása: $LOG_FILE"
+
 echo "🕒 $(date) – Telepítés indítása..."
 
 REPO_URL="https://github.com/shockman100/frx-vm-setup.git"
