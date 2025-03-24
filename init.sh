@@ -37,6 +37,7 @@ sudo apt install -y default-jre
 echo "🕒 $(date) – IB Gateway stabil verzió letöltése és telepítése..."
 sudo mkdir -p "$IBG_DIR"
 sudo mkdir -p "$IBG_USER_DIR"
+sudo chown -R shockman100:shockman100 "$IBG_USER_DIR"
 cd /tmp
 wget -q https://download2.interactivebrokers.com/installers/ibgateway/stable-standalone/ibgateway-stable-standalone-linux-x64.sh -O ibg.sh
 chmod +x ibg.sh
