@@ -3,7 +3,7 @@
 set -e  # Hibára álljon le
 
 # === 🌐 Naplózás bekapcsolása ===
-LOG_FILE="/var/log/frx-init.log"
+LOG_FILE="$HOME/frx-init.log"
 exec > >(tee -a "$LOG_FILE") 2>&1
 echo "📜 Telepítés naplózása: $LOG_FILE"
 echo "🕒 $(date) – Telepítés indítása..."
