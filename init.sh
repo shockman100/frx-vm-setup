@@ -9,6 +9,14 @@ echo "📜 Telepítés naplózása: $LOG_FILE"
 
 echo "🕒 $(date) – Telepítés indítása..."
 
+echo "🕒 $(date) – Git ellenőrzése és telepítése, ha hiányzik..."
+if ! command -v git &> /dev/null; then
+  echo "🔧 Git nem található, telepítés..."
+  sudo apt update && sudo apt install -y git
+else
+  echo "✅ Git már telepítve."
+fi
+
 REPO_URL="https://github.com/shockman100/frx-vm-setup.git"
 CLONE_DIR="/tmp/frx-vm-setup"
 INSTALL_DIR="/home/shockman100/forex-bot"
