@@ -144,12 +144,60 @@ echo "✅ A bot és az IB Gateway telepítve és elindítva."
 echo "📡 Ellenőrzés: sudo journalctl -u $SERVICE_NAME -f"
 echo "🌐 IB port: netstat -tuln | grep 7497"
 
+
+echo "🕒 $(date) – x11vnc telepítése és konfigurálása..."
+sudo apt install -y x11vnc
+
+# 🔑 VNC jelszó generálása
+echo "🕒 $(date) – 6 jegyű VNC jelszó generálása..."
+VNC_PASS=$(shuf -i 100000-999999 -n 1)
+echo "$VNC_PASS" | x11vnc -storepasswd - /home/shockman100/.vnc/passwd
+chmod 600 /home/shockman100/.vnc/passwd
+chown shockman100:shockman100 /home/shockman100/.vnc/passwd
+
+# 🛠️ systemd szolgáltatás
+echo "🕒 $(date) – x11vnc systemd szolgáltatás létrehozása..."
+sudo tee /etc/systemd/system/x11vnc.service > /dev/null <<EOF
+[Unit]
+Description=x11vnc remote desktop server
+After=network.target xvfb.service
+Requires=xvfb.service
+
+[Service]
+Type=simple
+User=shockman100
+Environment=DISPLAY=:1
+ExecStart=/usr/bin/x11vnc -display :1 -auth guess -forever -loop -noxdamage -repeat -rfbauth /home/shockman100/.vnc/passwd -rfbport 5901 -shared
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable x11vnc
+sudo systemctl restart x11vnc
+echo "✅ x11vnc elindítva a :1 display-en, port 5901-en."
+
+
 # === 📩 TELEGRAM ÉRTESÍTÉS A VÉGÉN ===
 echo "🕒 $(date) – Telegram értesítés küldése..."
 
 PROJECT_ID=$(curl -s -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/project/project-id)
 TELEGRAM_TOKEN=$(gcloud secrets versions access latest --secret="telegram_bot_token" --project="$PROJECT_ID")
 TELEGRAM_CHAT_ID=$(gcloud secrets versions access latest --secret="telegram_chat_id" --project="$PROJECT_ID")
+
+
+# 🔔 VNC jelszó elküldése Telegramon
+if [[ -n "$TELEGRAM_TOKEN" && -n "$TELEGRAM_CHAT_ID" ]]; then
+  curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+    -d chat_id="$TELEGRAM_CHAT_ID" \
+    -d text="🔐 VNC jelszó (port 5901): $VNC_PASS"
+  echo "📨 VNC jelszó elküldve Telegramon."
+else
+  echo "⚠️ Telegram token vagy chat_id hiányzik – VNC jelszó nem küldhető el."
+fi
+
 
 if [[ -n "$TELEGRAM_TOKEN" && -n "$TELEGRAM_CHAT_ID" ]]; then
   curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
