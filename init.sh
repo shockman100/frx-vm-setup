@@ -158,6 +158,9 @@ sudo apt install -y x11vnc
 
 # 🔑 VNC jelszó generálása
 echo "🕒 $(date) – 6 jegyű VNC jelszó generálása..."
+# 📁 .vnc mappa létrehozása
+mkdir -p /home/shockman100/.vnc
+chown shockman100:shockman100 /home/shockman100/.vnc
 VNC_PASS=$(shuf -i 100000-999999 -n 1)
 echo "$VNC_PASS" | x11vnc -storepasswd - /home/shockman100/.vnc/passwd
 chmod 600 /home/shockman100/.vnc/passwd
