@@ -3,3 +3,6 @@ requests
 google-cloud-secret-manager
 python-telegram-bot==20.3
 aiohttp
+oandapyV20
+requests
+PyYAML
